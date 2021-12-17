@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <title>ytmp3</title>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row my-2">
+        <div class="col text-center justify-content-center">
+          <h1>YTMP3</h1>
+        </div>
+      </div>
+      <div class="row my-2">
+        <div class="col">
+          <a href="#" id="transcode_link" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary w-100 disabled">Transcode Link</a>
+        </div>
+      </div>
+      <div class="row my-2">
+        <div class="col">
+          <form>
+            <div class="input-group">
+              <input class="form-control is-invalid" type="text" placeholder="URL" name="url" id="url"></input>
+              <span class="input-group-text btn btn-outline-secondary" id="clear_url">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                  <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                </svg>
+              </span>
+              <div class="invalid-feedback" id="url"></div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function extract_id(url) {
+        var regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+        var match = url.match(regExp);
+        return (match && match[7].length === 11) ? match[7] : false;
+      }
+
+      function get_transcode_url(id) {
+        const api_url = "https://api.transcode.ca/cors";
+        let req_url = `${api_url}/video/youtube/${id}`;
+        return req_url;
+      }
+
+      let url_input_el = $("input[name='url']");
+      let url_clear_el = $("#clear_url");
+
+      url_clear_el.click(function(ev) {
+        url_input_el.val("");
+        url_input_el.trigger('change');
+      });
+
+      url_input_el.change(function() {
+        let link_el = $("#transcode_link");
+        let error_el = $(".invalid-feedback#url");
+
+        let url = $(this).val();
+        let id = extract_id(url);
+
+        if (!id) {
+          link_el.addClass("disabled");
+          link_el.attr('href', '#');
+          error_el.html("Invalid url");
+          $(this).addClass("is-invalid");
+          return;
+        }
+
+        let transcode_url = get_transcode_url(id);
+        link_el.attr('href', transcode_url);
+        link_el.removeClass("disabled");
+        $(this).removeClass("is-invalid");
+      });
+      
+      url_input_el.trigger('change');
+    
+    </script>
+  </body>
+</html>
