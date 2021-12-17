@@ -15,11 +15,15 @@
           <h1>YTMP3</h1>
         </div>
       </div>
+
+      <!--Transcode url-->
       <div class="row my-2">
         <div class="col">
           <a href="#" id="transcode_link" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary w-100 disabled">Transcode Link</a>
         </div>
       </div>
+
+      <!--Video url-->
       <div class="row my-2">
         <div class="col">
           <form>
@@ -36,6 +40,63 @@
           </form>
         </div>
       </div>
+      
+      <!--Show video metadata-->
+      <div class="row">
+        <div class="col-auto">
+          <img src="" width="0" height="0" id="video_img" class="img-fluid" max-width="100%"></img>
+        </div>
+        <div class="col">
+          <table class="table">
+            <tbody>
+              <tr>
+                <th>Slug</th>
+                <td>
+                  <div class="d-flex justify-content-between">
+                    <div id="video_slug"></div>
+                    <div>
+                      <div id="copy_video_slug" class="btn btn-sm btn-outline-secondary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard-check" viewBox="0 0 16 16">
+                          <path fill-rule="evenodd" d="M10.854 7.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 9.793l2.646-2.647a.5.5 0 0 1 .708 0z"/>
+                          <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+                          <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+                        </svg> 
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <th>Title</th>
+                <td id="video_title"></td>
+              </tr>
+              <tr>
+                <th>Description</th>
+                <td id="video_description"></td>
+              </tr>
+              <tr>
+                <th>Channel</th>
+                <td id="video_channel"></td>
+              </tr>
+              <tr>
+                <th>Publish Date</th>
+                <td id="video_publish_date"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!--Notifications-->
+      <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div class="toast align-items-center" role="alert" aria-live="assertive" aria-atomic="true" id="slug_copy_toast">
+          <div class="d-flex">
+            <div class="toast-body" id="slug_copy_text"></div>
+            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <script>
@@ -49,6 +110,91 @@
         const api_url = "https://api.transcode.ca/cors";
         let req_url = `${api_url}/video/youtube/${id}`;
         return req_url;
+      }
+        
+      async function get_video_info(id) {
+        let api_key = "AIzaSyDkmFSz9gH9slSnonGjs8TZEjtAKS4e9cg";
+        let url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${id}&key=${api_key}`;
+        let data = await $.getJSON(url);
+        if (data.items.length === 0) {
+          throw new Error("Video url doesn't exist");
+        }
+
+        let metadata = data.items[0].snippet;
+        return metadata;
+      }
+      
+      // slugify a string to save as a filename
+      function string_to_slug(str) {
+        str = str.replace(/^\s+|\s+$/g, ''); // trim
+        str = str.toLowerCase();
+      
+        // remove accents, swap ñ for n, etc
+        var from = "àáäâèéëêìíïîòóöôùúüûñç·/_,:;";
+        var to   = "aaaaeeeeiiiioooouuuunc------";
+        for (var i=0, l=from.length ; i<l ; i++) {
+          str = str.replace(new RegExp(from.charAt(i), 'g'), to.charAt(i));
+        }
+
+        str = str.replace(/[^a-z0-9 -]/g, '') // remove invalid chars
+          .replace(/\s+/g, '-') // collapse whitespace and replace by -
+          .replace(/-+/g, '-'); // collapse dashes
+
+        return str;
+      }
+
+      let copy_video_slug_btn = $('#copy_video_slug');
+      copy_video_slug_btn.on('click', function() {
+        let video_slug = $("#video_slug");
+        let slug = video_slug.html();
+        if (slug != '') {
+          copy_to_clipboard(slug);
+        }
+      });
+
+      function update_video_view(data) {
+        let video_img = $("#video_img");
+        let video_slug = $("#video_slug");
+        let video_title = $("#video_title");
+        let video_description = $("#video_description");
+        let video_channel = $("#video_channel");
+        let video_publish_date = $("#video_publish_date");
+        
+        // find largest thumbnail to render
+        let tbs = data?.thumbnails;
+        let thumbnail = tbs?.standard || tbs?.high || tbs?.medium || tbs?.default;
+
+        video_img.attr('src', thumbnail?.url || '');
+        video_img.attr('width', thumbnail?.width || '0');
+        video_img.attr('height', thumbnail?.height || '0');
+
+        let slug = string_to_slug(data?.title || '');
+        if (slug != '') {
+          copy_video_slug_btn.removeClass('disabled');
+          copy_to_clipboard(slug);
+        } else {
+          copy_video_slug_btn.addClass('disabled');
+        }
+
+        video_slug.html(slug);
+        video_title.html(data?.title || '');
+        video_description.html(data?.description || '');
+        video_channel.html(data?.channelTitle || '');
+        video_publish_date.html(data?.publishedAt || '');
+      }
+      
+      // toast notifications
+      let slug_copy_toast_el = $("#slug_copy_toast").first()[0];
+      let slug_copy_toast = new bootstrap.Toast(slug_copy_toast_el);
+
+      function copy_to_clipboard(txt) {
+       navigator.clipboard.writeText(txt).then(function() {
+          $("#slug_copy_text").html("Copied video slug");
+          slug_copy_toast.show();          
+        }, function() {
+          $("#slug_copy_text").html("Failed to copy video slug");
+          slug_copy_toast.show();          
+        }); 
       }
 
       let url_input_el = $("input[name='url']");
@@ -66,18 +212,33 @@
         let url = $(this).val();
         let id = extract_id(url);
 
-        if (!id) {
+        let disable_transcode_button = (message) => {
+          error_el.html(message);
           link_el.addClass("disabled");
           link_el.attr('href', '#');
-          error_el.html("Invalid url");
           $(this).addClass("is-invalid");
+          update_video_view();
+        }
+
+        if (!id) {
+          update_video_view();
+          disable_transcode_button("Invalid url");
           return;
         }
 
-        let transcode_url = get_transcode_url(id);
-        link_el.attr('href', transcode_url);
-        link_el.removeClass("disabled");
-        $(this).removeClass("is-invalid");
+        get_video_info(id)
+          // if valid video id
+          .then(data => {
+            update_video_view(data);
+
+            let transcode_url = get_transcode_url(id);
+            link_el.attr('href', transcode_url);
+            link_el.removeClass("disabled");
+            $(this).removeClass("is-invalid");
+          })
+          .catch(err => {
+            disable_transcode_button(err.message || "Failed to retrieve video metadata");
+          });
       });
       
       url_input_el.trigger('change');
