@@ -122,7 +122,8 @@
         
       async function get_video_info(id) {
         let api_key = "AIzaSyDkmFSz9gH9slSnonGjs8TZEjtAKS4e9cg";
-        let url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${id}&key=${api_key}`;
+        let api_endpoint = "https://www.googleapis.com/youtube/v3/videos";
+        let url = api_endpoint + "?part=snippet&id=" + id + "&key=" + api_key;
         let data = await $.getJSON(url);
         if (data.items.length === 0) {
           throw new Error("Video url doesn't exist");
@@ -175,8 +176,14 @@
         video_img.attr('src', thumbnail?.url || '');
         video_img.attr('width', thumbnail?.width || '0');
         video_img.attr('height', thumbnail?.height || '0');
-
+        
+        // create slug
         let slug = string_to_slug(data?.title || '');
+        let ext = ".m4a";
+        if (slug != '') {
+          slug = slug + ext;
+        }
+
         if (slug != '') {
           copy_video_slug_btn.removeClass('disabled');
           copy_to_clipboard(slug);
