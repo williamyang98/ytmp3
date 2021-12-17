@@ -79,6 +79,10 @@
                 <td id="video_title"></td>
               </tr>
               <tr>
+                <th>Duration</th>
+                <td id="video_duration"></td>
+              </tr>
+              <tr>
                 <th>Description</th>
                 <td id="video_description"></td>
               </tr>
@@ -123,13 +127,14 @@
       async function get_video_info(id) {
         let api_key = "AIzaSyDkmFSz9gH9slSnonGjs8TZEjtAKS4e9cg";
         let api_endpoint = "https://www.googleapis.com/youtube/v3/videos";
-        let url = api_endpoint + "?part=snippet&id=" + id + "&key=" + api_key;
+        let url = api_endpoint + "?part=snippet,contentDetails" + "&id=" + id + "&key=" + api_key;
         let data = await $.getJSON(url);
         if (data.items.length === 0) {
           throw new Error("Video url doesn't exist");
         }
-
-        let metadata = data.items[0].snippet;
+        
+        let item = data.items[0];
+        let metadata = {...item.snippet, ...item.contentDetails};
         return metadata;
       }
       
@@ -161,10 +166,43 @@
         }
       });
 
+      // convert duration string to %d:%h:%m:%s format
+      function YTDurationToDHMS(duration) {
+        var match = duration.match(/P(\d+D)?T(\d+H)?(\d+M)?(\d+S)?/);
+        if (match === null) {
+          throw new Error('Invalid duration');
+        }
+
+        match = match.slice(1).map(function(x) {
+          if (x != null) {
+              return x.replace(/\D/, '');
+          }
+        });
+
+        let [D,H,M,S] = match.map(x => parseInt(x) || 0);
+        return [D,H,M,S];
+      }
+
+      function DHMStoString(D,H,M,S) {
+        let str = '';
+        let should_append = false;
+        let format_time = (val, name) => {
+            let plural_suffix = val > 1 ? 's' : '';
+            return `${val} ${name}${plural_suffix}`;
+        }
+        should_append ||= D > 0; if (should_append) str += `${format_time(D, 'day')} `;
+        should_append ||= H > 0; if (should_append) str += `${format_time(H, 'hour')} `; 
+        should_append ||= M > 0; if (should_append) str += `${format_time(M, 'minute')} `; 
+        str += `${format_time(S, 'second')}`;
+        return str;
+      }
+      
+      // update video metadata element
       function update_video_view(data) {
         let video_img = $("#video_img");
         let video_slug = $("#video_slug");
         let video_title = $("#video_title");
+        let video_duration = $("#video_duration");
         let video_description = $("#video_description");
         let video_channel = $("#video_channel");
         let video_publish_date = $("#video_publish_date");
@@ -196,6 +234,14 @@
         video_description.html(data?.description || '');
         video_channel.html(data?.channelTitle || '');
         video_publish_date.html(data?.publishedAt || '');
+        
+        try {
+          let dhms = YTDurationToDHMS(data?.duration || '');
+          let str = DHMStoString(...dhms);
+          video_duration.html(str);
+        } catch (ex) {
+          video_duration.html("");
+        }
       }
       
       // toast notifications
