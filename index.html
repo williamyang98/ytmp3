@@ -96,7 +96,7 @@
       </div>
 
       <!--Notifications-->
-      <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+      <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11; max-width: 100vw;">
         <div class="toast align-items-center" role="alert" aria-live="assertive" aria-atomic="true" id="slug_copy_toast">
           <div class="d-flex">
             <div class="toast-body" id="slug_copy_text"></div>
@@ -170,7 +170,7 @@
         
         // find largest thumbnail to render
         let tbs = data?.thumbnails;
-        let thumbnail = tbs?.standard || tbs?.high || tbs?.medium || tbs?.default;
+        let thumbnail = tbs?.high || tbs?.medium || tbs?.default;
 
         video_img.attr('src', thumbnail?.url || '');
         video_img.attr('width', thumbnail?.width || '0');
